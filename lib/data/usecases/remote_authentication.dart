@@ -1,4 +1,5 @@
 import '../http/http.dart';
+import '../../domain/helpers/helpers.dart';
 import '../../domain/usecases/usecases.dart';
 
 class RemoteAuthentication {
@@ -7,12 +8,13 @@ class RemoteAuthentication {
 
   RemoteAuthentication({required this.httpClient, required this.url});
 
-  auth(AuthenticationParams params) async {
-    await httpClient.request(
-      url: url,
-      method: 'get', 
-      body: RemoteAuthenticationParams.fromDomain(params).toJson()
-    );
+  Future<void> auth(AuthenticationParams params) async {
+    final body = RemoteAuthenticationParams.fromDomain(params).toJson();
+    try {
+      await httpClient.request(url: url, method: 'get', body: body);
+    } on HttpError {
+      throw DomainError.unexpected;
+    }
   }
 }
 
@@ -24,9 +26,7 @@ class RemoteAuthenticationParams {
 
   factory RemoteAuthenticationParams.fromDomain(AuthenticationParams params) =>
       RemoteAuthenticationParams(
-        email: params.email, 
-        password: params.password
-      );
+          email: params.email, password: params.password);
 
   Map toJson() => {'email': email, 'password': password};
 }
