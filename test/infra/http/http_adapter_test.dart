@@ -21,15 +21,27 @@ class HttpAdapter {
 }
 
 void main() {
+  late HttpClientSpy httpClient;
+  late HttpAdapter sut;
+  late String url;
+
+  setUp(() {
+    httpClient = HttpClientSpy();
+    sut = HttpAdapter(httpClient);
+    url = faker.internet.httpUrl();
+  });
+
+  mockRequest() => when(httpClient)
+      .calls(#post)
+      .withArgs(positional: [Uri.parse(url)], named: {#headers: any});
+
+  void mockHttpData(Map data) {
+    mockRequest().thenAnswer((_) async => Response(data.toString(), 200));
+  }
+
   group('post', () {
     test('should call POST with correct values', () async {
-      final httpClient = HttpClientSpy();
-      final sut = HttpAdapter(httpClient);
-      final url = faker.internet.httpUrl();
-
-      when(httpClient).calls(#post)
-        .withArgs(positional: [Uri.parse(url)], named: {#headers: any})
-        .thenAnswer((_) async => Response('', 200));
+      mockHttpData({});
 
       await sut.request(url: url, method: 'post');
 
@@ -37,13 +49,7 @@ void main() {
     });
 
     test('should call POST with correct default headers', () async {
-      final httpClient = HttpClientSpy();
-      final sut = HttpAdapter(httpClient);
-      final url = faker.internet.httpUrl();
-
-      when(httpClient).calls(#post)
-        .withArgs(positional: [Uri.parse(url)], named: {#headers: any})
-        .thenAnswer((_) async => Response('', 200));
+      mockHttpData({});
 
       await sut.request(url: url, method: 'post');
 
