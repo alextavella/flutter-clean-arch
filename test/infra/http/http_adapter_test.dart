@@ -12,7 +12,11 @@ class HttpAdapter {
 
   Future<void> request(
       {required String url, required String method, Map? body}) async {
-    await this.client.post(Uri.parse(url));
+    final headers = {
+      'content-type': 'application/json',
+      'accept': 'application/json'
+    };
+    await this.client.post(Uri.parse(url), headers: headers);
   }
 }
 
@@ -24,12 +28,32 @@ void main() {
       final url = faker.internet.httpUrl();
 
       when(httpClient).calls(#post)
-          .withArgs(positional: [Uri.parse(url)])
-          .thenAnswer((_) async => Response('', 200));
+        .withArgs(positional: [Uri.parse(url)], named: {#headers: any})
+        .thenAnswer((_) async => Response('', 200));
 
       await sut.request(url: url, method: 'post');
 
       verify(httpClient).called(#post).once();
+    });
+
+    test('should call POST with correct default headers', () async {
+      final httpClient = HttpClientSpy();
+      final sut = HttpAdapter(httpClient);
+      final url = faker.internet.httpUrl();
+
+      when(httpClient).calls(#post)
+        .withArgs(positional: [Uri.parse(url)], named: {#headers: any})
+        .thenAnswer((_) async => Response('', 200));
+
+      await sut.request(url: url, method: 'post');
+
+      verify(httpClient).called(#post).withArgs(named: {
+        #url: url,
+        #headers: {
+          'content-type': 'application/json',
+          'accept': 'application/json'
+        }
+      });
     });
   });
 }
