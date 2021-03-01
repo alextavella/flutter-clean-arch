@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:faker/faker.dart';
 import 'package:http/http.dart';
 import 'package:mocktail/mocktail.dart';
@@ -16,7 +18,7 @@ class HttpAdapter {
       'content-type': 'application/json',
       'accept': 'application/json'
     };
-    await this.client.post(Uri.parse(url), headers: headers);
+    await this.client.post(Uri.parse(url), headers: headers, body: jsonEncode(body));
   }
 }
 
@@ -33,7 +35,7 @@ void main() {
 
   mockRequest() => when(httpClient)
       .calls(#post)
-      .withArgs(positional: [Uri.parse(url)], named: {#headers: any});
+      .withArgs(positional: [Uri.parse(url)], named: {#headers: any, #body: any});
 
   void mockHttpData(Map data) {
     mockRequest().thenAnswer((_) async => Response(data.toString(), 200));
@@ -59,6 +61,21 @@ void main() {
           'content-type': 'application/json',
           'accept': 'application/json'
         }
+      });
+    });
+
+    test('should call POST with body', () async {
+      mockHttpData({});
+
+      await sut.request(url: url, method: 'post', body: {'any_key': 'any_value'});
+
+      verify(httpClient).called(#post).withArgs(named: {
+        #url: url,
+        #headers: {
+          'content-type': 'application/json',
+          'accept': 'application/json'
+        },
+        #body: "{'any_key': 'any_value'}"
       });
     });
   });
