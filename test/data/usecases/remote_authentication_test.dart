@@ -15,6 +15,21 @@ void main() {
   late String url;
   late AuthenticationParams params;
 
+  mockValidData() =>
+      {'accessToken': faker.guid.guid(), 'name': faker.person.name()};
+
+  mockRequest() => when(httpClient)
+      .calls(#request)
+      .withArgs(named: {#url: url, #method: 'get', #body: any});
+
+  void mockHttpData(Map data) {
+    mockRequest().thenAnswer((_) async => data);
+  }
+
+  void mockHttpError(HttpError error) {
+    mockRequest().thenThrow(error);
+  }
+
   setUp(() {
     httpClient = HttpClientSpy();
     url = faker.internet.httpUrl();
@@ -22,35 +37,23 @@ void main() {
         httpClient: httpClient, url: url); // System under test
 
     params = AuthenticationParams(
-        email: faker.internet.email(),
-        password: faker.internet.password());
+        email: faker.internet.email(), password: faker.internet.password());
   });
 
   test('should call HttpClient with correct values', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any })
-      .thenAnswer((_) async => {
-        'accessToken': faker.guid.guid(),
-        'name': faker.person.name()
-      });
+    mockHttpData(mockValidData());
 
     await sut.auth(params);
 
-    verify(httpClient)
-    .called(#request)
-    .withArgs(named: {
-        #url: url,
-        #method: 'get',
-        #body: {'email': params.email, 'password': params.password}
+    verify(httpClient).called(#request).withArgs(named: {
+      #url: url,
+      #method: 'get',
+      #body: {'email': params.email, 'password': params.password}
     });
   });
 
   test('should throw UnexpectedError if HttpClient return 400', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any})
-      .thenThrow(HttpError.badRequest);
+    mockHttpError(HttpError.badRequest);
 
     final future = sut.auth(params);
 
@@ -58,10 +61,7 @@ void main() {
   });
 
   test('should throw UnexpectedError if HttpClient return 404', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any})
-      .thenThrow(HttpError.notFound);
+    mockHttpError(HttpError.notFound);
 
     final future = sut.auth(params);
 
@@ -69,10 +69,7 @@ void main() {
   });
 
   test('should throw UnexpectedError if HttpClient return 500', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any})
-      .thenThrow(HttpError.serverError);
+    mockHttpError(HttpError.serverError);
 
     final future = sut.auth(params);
 
@@ -80,10 +77,7 @@ void main() {
   });
 
   test('should throw UnexpectedError if HttpClient return 401', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any})
-      .thenThrow(HttpError.unauthorizaed);
+    mockHttpError(HttpError.unauthorizaed);
 
     final future = sut.auth(params);
 
@@ -91,28 +85,18 @@ void main() {
   });
 
   test('should return Account if HttpClient return 200', () async {
-    final accessToken = faker.guid.guid();
-
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any })
-      .thenAnswer((_) async => {
-        'accessToken': accessToken,
-        'name': faker.person.name()
-      });
+    final validData = mockValidData();
+    mockHttpData(validData);
 
     final account = await sut.auth(params);
 
-    expect(account.token, accessToken);
+    expect(account.token, validData["accessToken"]);
   });
 
-  test('should throw UnexpectedError if HttpClient return 200 with invalid data', () async {
-    when(httpClient)
-      .calls(#request)
-      .withArgs(named: {#url: url, #method: 'get', #body: any })
-      .thenAnswer((_) async => {
-        'invalida_key': 'invalid_value'
-      });
+  test(
+      'should throw UnexpectedError if HttpClient return 200 with invalid data',
+      () async {
+    mockHttpData({'invalida_key': 'invalid_value'});
 
     final future = sut.auth(params);
 
