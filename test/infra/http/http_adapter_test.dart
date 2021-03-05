@@ -105,5 +105,13 @@ void main() {
 
       expect(response, {});
     });
+
+    test('should return data if post returns 204', () async {
+      mockRequest().thenAnswer((_) async => Response('', 204));
+
+      final response = await sut.request(url: url, method: 'post');
+
+      expect(response, {});
+    });
   });
 }
