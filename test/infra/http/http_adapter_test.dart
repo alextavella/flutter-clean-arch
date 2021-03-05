@@ -5,20 +5,27 @@ import 'package:http/http.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import 'package:cleanarch/data/http/http.dart';
+
 class HttpClientSpy extends Mock implements Client {}
 
-class HttpAdapter {
+class HttpAdapter implements HttpClient {
   final Client client;
 
   HttpAdapter(this.client);
 
-  Future<void> request(
+  Future<Map> request(
       {required String url, required String method, Map? body}) async {
     final headers = {
       'content-type': 'application/json',
       'accept': 'application/json'
     };
-    await this.client.post(Uri.parse(url), headers: headers, body: jsonEncode(body));
+    final jsonBody = body != null ? jsonEncode(body) : null;
+    final response = await this
+        .client
+        .post(Uri.parse(url), headers: headers, body: jsonBody);
+    print(response.body.isEmpty.toString());
+    return response.body.isEmpty ? {} : jsonDecode(response.body);
   }
 }
 
@@ -35,10 +42,13 @@ void main() {
 
   mockRequest() => when(httpClient)
       .calls(#post)
-      .withArgs(positional: [Uri.parse(url)], named: {#headers: any, #body: any});
+      .withArgs(positional: [Uri.parse(url)], named: {#headers: any});
+
+  mockRequestWithBody() => when(httpClient).calls(#post).withArgs(
+      positional: [Uri.parse(url)], named: {#headers: any, #body: any});
 
   void mockHttpData(Map data) {
-    mockRequest().thenAnswer((_) async => Response(data.toString(), 200));
+    mockRequest().thenAnswer((_) async => Response("$data", 200));
   }
 
   group('post', () {
@@ -65,9 +75,10 @@ void main() {
     });
 
     test('should call POST with body', () async {
-      mockHttpData({});
+      mockRequestWithBody().thenAnswer((_) async => Response("{}", 200));
 
-      await sut.request(url: url, method: 'post', body: {'any_key': 'any_value'});
+      await sut
+          .request(url: url, method: 'post', body: {'any_key': 'any_value'});
 
       verify(httpClient).called(#post).withArgs(named: {
         #url: url,
@@ -77,6 +88,22 @@ void main() {
         },
         #body: "{'any_key': 'any_value'}"
       });
+    });
+
+    test('should return data if post returns 200', () async {
+      mockRequest().thenAnswer((_) async => Response('{"a": "b"}', 200));
+
+      final response = await sut.request(url: url, method: 'post');
+
+      expect(response, {"a": "b"});
+    });
+
+    test('should return data if post returns 200 without data', () async {
+      mockRequest().thenAnswer((_) async => Response('', 200));
+
+      final response = await sut.request(url: url, method: 'post');
+
+      expect(response, {});
     });
   });
 }
