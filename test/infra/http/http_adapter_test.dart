@@ -40,6 +40,11 @@ void main() {
   });
 
   group('post', () {
+    void mockResponse(int statusCode,
+        {String body = '{"any_key": "any_value"}'}) {
+      mockRequest().thenAnswer((_) async => Response(body, statusCode));
+    }
+
     test('should call POST with correct values', () async {
       mockHttpData({});
 
@@ -79,15 +84,15 @@ void main() {
     });
 
     test('should return data if post returns 200', () async {
-      mockRequest().thenAnswer((_) async => Response('{"a": "b"}', 200));
+      mockResponse(200, body: '{"any_key": "any_value"}');
 
       final response = await sut.request(url: url, method: 'post');
 
-      expect(response, {"a": "b"});
+      expect(response, {"any_key": "any_value"});
     });
 
     test('should return data if post returns 200 without data', () async {
-      mockRequest().thenAnswer((_) async => Response('', 200));
+      mockResponse(200, body: '');
 
       final response = await sut.request(url: url, method: 'post');
 
@@ -95,7 +100,7 @@ void main() {
     });
 
     test('should return data if post returns 204', () async {
-      mockRequest().thenAnswer((_) async => Response('', 204));
+      mockResponse(204, body: '');
 
       final response = await sut.request(url: url, method: 'post');
 
@@ -103,7 +108,7 @@ void main() {
     });
 
     test('should return data if post returns 204 with data', () async {
-      mockRequest().thenAnswer((_) async => Response('{"a": "b"}', 204));
+      mockResponse(204);
 
       final response = await sut.request(url: url, method: 'post');
 
@@ -111,7 +116,7 @@ void main() {
     });
 
     test('should return BadRequestError if post returns 400', () async {
-      mockRequest().thenAnswer((_) async => Response('', 400));
+      mockResponse(400);
 
       final future = sut.request(url: url, method: 'post');
 
@@ -119,7 +124,7 @@ void main() {
     });
 
     test('should return UnauthorizedError if post returns 401', () async {
-      mockRequest().thenAnswer((_) async => Response('', 401));
+      mockResponse(401);
 
       final future = sut.request(url: url, method: 'post');
 
@@ -127,7 +132,7 @@ void main() {
     });
 
     test('should return ForbiddenError if post returns 403', () async {
-      mockRequest().thenAnswer((_) async => Response('', 403));
+      mockResponse(403);
 
       final future = sut.request(url: url, method: 'post');
 
@@ -135,7 +140,7 @@ void main() {
     });
 
     test('should return NotFoundError if post returns 404', () async {
-      mockRequest().thenAnswer((_) async => Response('', 404));
+      mockResponse(404);
 
       final future = sut.request(url: url, method: 'post');
 
@@ -143,7 +148,7 @@ void main() {
     });
 
     test('should return ServerError if post returns 500', () async {
-      mockRequest().thenAnswer((_) async => Response('', 500));
+      mockResponse(500);
 
       final future = sut.request(url: url, method: 'post');
 
