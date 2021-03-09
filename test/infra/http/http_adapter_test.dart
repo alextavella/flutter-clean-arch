@@ -29,6 +29,16 @@ void main() {
     mockRequest().thenAnswer((_) async => Response("$data", 200));
   }
 
+  group('shared', () {
+    test('should throw ServerError if invalid method iss provider', () async {
+      mockHttpData({});
+
+      final future = sut.request(url: url, method: 'invalid_method');
+
+      expect(future, throwsA(HttpError.serverError));
+    });
+  });
+
   group('post', () {
     test('should call POST with correct values', () async {
       mockHttpData({});
